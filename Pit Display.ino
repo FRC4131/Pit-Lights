@@ -31,13 +31,16 @@
 	2  3  30 28 24 25 
 	0  1  31 29 27 26
 
+	Of note: 27 and 26 in the above example are "reversed" because the length 
+	of the wires between the lights isn't long enough to stretch from the hole
+	at position 26 to the hole at position 28.
 */
    
 //==========================================================================
 // Defines
 
 #define PIXEL_PIN 6          // which data pin drives the pixels
-#define NUM_LEDS 68          // how many lights are in the display
+#define NUM_LEDS 70          // how many lights are in the display
 #define TEST_MODE_PIN 12     // ground this pin to run in test mode
 
 // the first pixel in the sequence at the bottom of the left column. 
@@ -56,6 +59,19 @@
 // In the example above, this is pixel 27 
 #define BOT_RIGHT_CORNER 70  
 
+// the last pixel in the sequence that is the outer 2 columns of the frame.
+// this is currently a bit of over-engineering, in case additional pixels at
+// the end of the strand are rolled into some other part of the display
+// In the example above, this is pixel 27 
+#define FRAME_END 70  
+
+
+// effectively creating an enum for the frame sides
+#define LEFT_SIDE 1
+#define TOP_SIDE 2
+#define RIGHT_SIDE 3
+#define BOTTOM_SIDE 4
+
 
 
 //==========================================================================
@@ -73,7 +89,7 @@ Adafruit_NeoPixel strip = Adafruit_NeoPixel(NUM_LEDS, PIXEL_PIN, NEO_RGB + NEO_K
 
 //==========================================================================
 void setup() {
-  pinMode(13, OUTPUT);  // for the onboard LED
+  pinMode(13, OUTPUT);  // for the onboard LED, in case we need it for debugging
 
   // pick a pin to ground to start testMode
   pinMode(TEST_MODE_PIN, INPUT_PULLUP);
@@ -122,27 +138,47 @@ void blinkLED(int pin, int nTimes) {
 // runTestSequence: runs a predefined test pattern to make sure that the
 // pixels are wired properly in the frame and that we know that all the key
 // points and edges are located where we expect them.
-
-void runRestSequence(){
-  // left column bottom row from left to righ
+//
+void runTestSequence(){
+  // left column bottom row from left to right
   simpleCyclePixel(BOT_LEFT_CORNER);
   simpleCyclePixel(BOT_LEFT_CORNER+1);
 
-  // left column top top row from left to right
+  // left column top row from left to right
   simpleCyclePixel(TOP_LEFT_CORNER-1);
   simpleCyclePixel(BOT_LEFT_CORNER);
 
+  // right column top row from left to right
+  simpleCyclePixel(TOP_RIGHT_CORNER);
+  simpleCyclePixel(TOP_RIGHT_CORNER+1);
+ 
+  // right column bottom row from left to right
+  simpleCyclePixel(BOT_RIGHT_CORNER);
+  simpleCyclePixel(BOT_RIGHT_CORNER-1);
+
+  lightsOff();
   
-  // Slowly light up the strand, 1 pixel at a time
-  colorWipe(strip.Color(255, 0, 0), 500); // Red
-  colorWipe(strip.Color(0, 255, 0), 500); // Green
-  colorWipe(strip.Color(0, 0, 255), 500); // Blue
+  // Light the frame sides: left and right, then top and bottom
+  lightFrameSide(LEFT_SIDE, 255,0,0);  delay(500);
+  lightFrameSide(RIGHT_SIDE, 0,255,0); delay(500);
+  lightsOff();
+  lightFrameSide(TOP_SIDE, 0,0,255);        delay(500);
+  lightFrameSide(BOTTOM_SIDE, 255,255,255); delay(500);
+  lightsOff();
+
+
+ // Slowly light up the strand, 1 pixel at a time
+//  colorWipe(strip.Color(255, 0, 0), 500); // Red
+//  colorWipe(strip.Color(0, 255, 0), 500); // Green
+//  colorWipe(strip.Color(0, 0, 255), 500); // Blue
 
 } // end testSequence
 
-//==========================================================================
-// cycles a pixel through Red, Green, and Blue with a short wait in between.
-
+/*==========================================================================
+   cycles a pixel through Red, Green, and Blue with a short wait between.
+   pixel: which pixel to light up 
+  ==========================================================================
+*/
 void simpleCyclePixel(int pixel) {
   strip.setPixelColor(pixel,strip.Color(255,0,0)); strip.show(); delay(500);
   strip.setPixelColor(pixel,strip.Color(0,255,0)); strip.show(); delay(500);
@@ -150,9 +186,79 @@ void simpleCyclePixel(int pixel) {
   strip.setPixelColor(pixel,strip.Color(0,0,0));   strip.show(); delay(500);
 } // end simplecCyclePixel
 
+/*==========================================================================
+   lightFrameSide: Lights a side of the frame. This function may  not live 
+   to production once I get a feeling for how this  "interface" should work
+   side: a DEFINE that denotes which side to light 
+   colorR: the R of RGB color
+   colorG: the G of RGB color
+   colorB: the B of RGB color
+  ==========================================================================
+*/
+void lightFrameSide(int side, int colorR, int colorG, int colorB) {
+  int i;
+  switch (side) {
+     case LEFT_SIDE:
+       for(i=BOT_LEFT_CORNER; i<=TOP_LEFT_CORNER; i++) {
+	     strip.setPixelColor(i,strip.Color(colorR,colorG,colorB));
+	   }
+       break;
+	   
+     case RIGHT_SIDE:
+       for(i=TOP_RIGHT_CORNER; i<=BOT_RIGHT_CORNER; i++) {
+	     strip.setPixelColor(i,strip.Color(colorR,colorG,colorB));
+	   }
+       break;
+	   
+     case TOP_SIDE:
+	   // since the top side is really two rows and the DEFINES mark the locations
+	   // on the top row, we need to offset appropriately. The README at top explains.
+       for(i=TOP_LEFT_CORNER-2; i<=TOP_RIGHT_CORNER+3; i++) {
+	     strip.setPixelColor(i,strip.Color(colorR,colorG,colorB));
+	   }
+	   break;
+	 
+     case BOTTOM_SIDE:
+	   // since the lights are wired clockwise, the bottom row is pretty complicated.
+	   // we do assume that our frame is 2 lights wide so the corners are squares of 4
+	   // The README at top explains and has an example.
+       
+	   // light first 4 LEDs to that make the first corner. Also note that this
+	   // loop uses < 4 to make the mental model easier even though the others use <=
+	   for(i=BOT_LEFT_CORNER; i<BOT_LEFT_CORNER+4; i++) {
+	     strip.setPixelColor(i,strip.Color(colorR,colorG,colorB));
+	   }
+	   // now go get the rest of the bottom row which is at the end of the light strand
+	   // because of the wiring order, the numbers here will look really weird. See the
+	   // README at the top for clarity
+	   for(i=BOT_RIGHT_CORNER-3; i<NUM_LEDS; i++) {
+	     strip.setPixelColor(i,strip.Color(colorR,colorG,colorB));
+	   }
+       break;
+	   
+     default: 
+       // if nothing else matches turn off all the lights
+       for(i=BOT_RIGHT_CORNER; i<FRAME_END; i++) {
+	     strip.setPixelColor(i,strip.Color(0,0,0));
+	   }
+       break;
+	 
+	 // turn on the lights
+	 strip.show();
+} // lightColumn 
 
-//===============================================================
+//==========================================================================
+// turn the lights off 
+//==========================================================================
+void lightsOff() {
+  for(i=BOT_RIGHT_CORNER; i<FRAME_END; i++) {
+	strip.setPixelColor(i,strip.Color(0,0,0));
+  }
+} // end lightsOff;
+
+//==========================================================================
 // Fill the dots one after the other with a color
+//==========================================================================
 void colorWipe(uint32_t c, uint8_t wait) {
   for(uint16_t i=0; i<strip.numPixels(); i++) {
     strip.setPixelColor(i, c);
@@ -161,7 +267,7 @@ void colorWipe(uint32_t c, uint8_t wait) {
   }
 } // end colorWipe
 
-//===============================================================
+//==========================================================================
 void rainbow(uint8_t wait) {
   uint16_t i, j;
 
@@ -172,9 +278,9 @@ void rainbow(uint8_t wait) {
     strip.show();
     delay(wait);
   }
-}
+} // end rainbow
 
-//===============================================================
+//==========================================================================
 // Slightly different, this makes the rainbow equally distributed throughout
 void rainbowCycle(uint8_t wait) {
   uint16_t i, j;
@@ -186,9 +292,9 @@ void rainbowCycle(uint8_t wait) {
     strip.show();
     delay(wait);
   }
-}
+} // end rainbowCycle
 
-//===============================================================
+//==========================================================================
 //Theatre-style crawling lights.
 void theaterChase(uint32_t c, uint8_t wait) {
   for (int j=0; j<10; j++) {  //do 10 cycles of chasing
@@ -205,9 +311,9 @@ void theaterChase(uint32_t c, uint8_t wait) {
       }
     } // end q loop
   } // end j loop
-}
+} // end theaterChase
 
-//===============================================================
+//==========================================================================
 //Theatre-style crawling lights with rainbow effect
 void theaterChaseRainbow(uint8_t wait) {
   for (int j=0; j < 256; j++) {     // cycle all 256 colors in the wheel
@@ -224,9 +330,9 @@ void theaterChaseRainbow(uint8_t wait) {
       }
     } // end q loop
   } // end j loop
-}
+} // end theaterChaseRainbow
 
-//===============================================================
+//==========================================================================
 // Input a value 0 to 255 to get a color value.
 // The colours are a transition r - g - b - back to r.
 uint32_t Wheel(byte WheelPos) {
@@ -240,4 +346,4 @@ uint32_t Wheel(byte WheelPos) {
   }
   WheelPos -= 170;
   return strip.Color(WheelPos * 3, 255 - WheelPos * 3, 0);
-}
+} // end Wheel
