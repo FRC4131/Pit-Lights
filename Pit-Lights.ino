@@ -70,6 +70,7 @@
 #define TOP_SIDE 2
 #define RIGHT_SIDE 3
 #define BOTTOM_SIDE 4
+#define WHOLE_FRAME 5
 
 // pit game buttons
 #define BUTTON_1_PIN 2
@@ -93,13 +94,22 @@ Adafruit_NeoPixel strip = Adafruit_NeoPixel(NUM_LEDS, PIXEL_PIN, NEO_RGB + NEO_K
 // global variables
 
 // Lets us know if flair mode has been interrupted by a button press.
-// has to be volatile because of the way interrupts work.
+// (has to be volatile because of the way interrupts work)
 volatile boolean interruptButtonPressed;
 
+// Lets us know which button was pressed by way of interrupts 
+// (has to be volatile because of the way interrupts work)
+volatile boolean buttonOnePressed;
+volatile boolean buttonTwoPressed;
 
 // Interrupt Service Routine (ISR)
-void isr () {
+void isrButtonOne () {
   interruptButtonPressed = true;
+  buttonOnePressed = true;
+}  // end of isr
+void isrButtonTwo () {
+  interruptButtonPressed = true;
+  buttonTwoPressed = true;
 }  // end of isr
 
 
@@ -116,8 +126,8 @@ void setup() {
 
   // registering the intertupt to stop flair mode and go into game mode
   interruptButtonPressed = false;
-  attachInterrupt(digitalPinToInterrupt(BUTTON_1_PIN), isr, FALLING);
-  attachInterrupt(digitalPinToInterrupt(BUTTON_2_PIN), isr, FALLING);
+  attachInterrupt(digitalPinToInterrupt(BUTTON_1_PIN), isrButtonOne, FALLING);
+  attachInterrupt(digitalPinToInterrupt(BUTTON_2_PIN), isrButtonTwo, FALLING);
   
   strip.begin();
   strip.show(); // Initialize all pixels to 'off'
@@ -133,15 +143,28 @@ void loop() {
   } else {
 
   theaterChase(strip.Color(127, 127, 127), 50); // Light White
-  if(interruptButtonPressed) { gameMode(); }
+  if(interruptButtonPressed) { gameMode(); }    // we do this often to reduce wait time
+
   theaterChase(strip.Color(127, 0, 0), 50);     // Light Red
+  if(interruptButtonPressed) { gameMode(); }
+
   theaterChase(strip.Color(0, 0, 127), 50);     // Light Blue
+  if(interruptButtonPressed) { gameMode(); }
+
   delay(1000);
-  
+  if(interruptButtonPressed) { gameMode(); }
+
   rainbow(20);
+  if(interruptButtonPressed) { gameMode(); }
+
   rainbowCycle(20);
+  if(interruptButtonPressed) { gameMode(); }
+
   theaterChaseRainbow(50); 
+  if(interruptButtonPressed) { gameMode(); }
+
   delay(1000);
+  if(interruptButtonPressed) { gameMode(); }
   
     
   } // end if / else testMode
@@ -156,14 +179,84 @@ void loop() {
 	and right columns will light red, yellow, then green, and then go out. 
 	Think ready, steady, go. After the lights go out, the first person to hit
 	their button wins. If no button is pressed, the game will end after 1 second.
-	The lights in each column will light showing how fast each player was, by
-	the height of the light column from bottom up. 
+	The lights in each column will light showing how fast each player was. The
+    lights will light up white from the top down where the shorter white column
+	is better (less time from lights out to button press). However, in order to
+	give the players a feeling of success, the empty space in the column will be
+	filled in by green lights which will result in a taller column of green being
+	considered doing the best.
+	
+	Additional ideas on the UI are to fill the remaining area with green on the winning
+	side red on the losing side OR to provide a relative weighting where the
+	column is broken up into 3rds where the poorer parts are red, medium are yellow 
+	and better section is green. The idea is that besides beating one another,
+	players would want to be fast enough to get lights in the green segment.
+	This will take some tuning on the scale of how fast people tend to be and 
+	may be more trouble than it is worth.
    
    ==========================================================================
 */
 void gameMode(){
    noInterrupts();  // once we are in game mode, don't listen to interrupts
+
+   // lights off to alert the players that the game is about to start and 
+   // keep them off for 1 second to make it obvious
+   lightsOff(); delay(1000);
    
+   lightFrame(WHOLE_FRAME, 255,0,0); delay(1000);  // Red 
+   lightFrame(WHOLE_FRAME, 255,255,0); delay(1000);  // Yellow
+   lightFrame(WHOLE_FRAME, 0,255,0); delay(1000);  // Green 
+
+   lightsOff(); delay(1000);
+   
+   // Red 
+   lightFrame(LEFT_SIDE,  255,0,0); 
+   lightFrame(RIGHT_SIDE, 255,0,0); 
+   delay(1000);   
+   
+   // Yellow
+   lightFrame(LEFT_SIDE,  255,255,0); 
+   lightFrame(RIGHT_SIDE, 255,255,0); 
+   delay(1000);   
+
+   // Green
+   lightFrame(LEFT_SIDE,  0,255,0); 
+   lightFrame(RIGHT_SIDE, 0,255,0); 
+   delay(1000);   
+   
+   // Game starts when the lights go out!
+   lightsOff();
+   
+   // re-enable interrupts because we'll use those to catch the button press
+   interrupts(); 
+   
+   boolean buttonOnePressed = false;
+   boolean buttonTwoPressed = false;
+   int playerOneTime = 0;
+   int playerTwoTime = 0;
+      
+   // loop until 2 seconds or both buttons pressed
+   int numMS = 0;
+   while( (numMS < 1000) || ( (playerOneTime > 0) && (playerTwoTime > 0) ) ) {
+     // if a button was pressed for the first time then save the numMS.
+	   if( buttonOnePressed && (playerOneTime > 0) ) {
+	     playerOneTime = numMS;
+       }
+     if( buttonTwoPressed || (playerTwoTime > 0)) {
+	     playerTwoTime = numMS;
+     }
+     // delaying 1 ms is a proxy to count/track time in the loop to see who is fastest
+	   delay(1);   
+   } // end while
+
+   // figure out who wins and the show results
+   /* TODO */
+   
+   // re-enable interrupts and reset flag
+   interrupts();
+   interruptButtonPressed = false;
+   buttonOnePressed = false;
+   buttonTwoPressed = false;
 } // end gameMode
 
 /*==========================================================================
@@ -192,12 +285,12 @@ void runTestSequence(){
   lightsOff();
   
   // Light the frame sides: left and right, then top and bottom
-  lightFrameSide(LEFT_SIDE, 255,0,0);  delay(1000);
-  lightFrameSide(RIGHT_SIDE, 0,255,0); delay(1000);
+  lightFrame(LEFT_SIDE, 255,0,0);  delay(1000);
+  lightFrame(RIGHT_SIDE, 0,255,0); delay(1000);
   lightsOff();
   
-  lightFrameSide(TOP_SIDE, 0,0,255);        delay(1000);
-  lightFrameSide(BOTTOM_SIDE, 255,255,255); delay(1000);
+  lightFrame(TOP_SIDE, 0,0,255);        delay(1000);
+  lightFrame(BOTTOM_SIDE, 255,255,255); delay(1000);
   
   lightsOff();
 
@@ -221,7 +314,7 @@ void simpleCyclePixel(int pixel) {
 } // end simpleCyclePixel
 
 /*==========================================================================
-   lightFrameSide: Lights a side of the frame. This function may  not live 
+   lightFrame: Lights some parts of the frame. This function may  not live 
    to production once I get a feeling for how this  "interface" should work
    side: a DEFINE that denotes which side to light 
    colorR: the R of RGB color
@@ -229,7 +322,7 @@ void simpleCyclePixel(int pixel) {
    colorB: the B of RGB color
   ==========================================================================
 */
-void lightFrameSide(int side, int colorR, int colorG, int colorB) {
+void lightFrame(int side, int colorR, int colorG, int colorB) {
   int i;
   switch (side) {
      case LEFT_SIDE:
@@ -245,38 +338,45 @@ void lightFrameSide(int side, int colorR, int colorG, int colorB) {
        break;
      
      case TOP_SIDE:
-     // since the top side is really two rows and the DEFINES mark the locations
-     // on the top row, we need to offset appropriately. The README at top explains.
+       // since the top side is really two rows and the DEFINES mark the locations
+       // on the top row, we need to offset appropriately. The README at top explains.
        for(i=TOP_LEFT_CORNER-2; i<=TOP_RIGHT_CORNER+3; i++) {
        strip.setPixelColor(i,strip.Color(colorR,colorG,colorB));
      }
      break;
    
      case BOTTOM_SIDE:
-     // since the lights are wired clockwise, the bottom row is pretty complicated.
-     // we do assume that our frame is 2 lights wide so the corners are squares of 4
-     // The README at top explains and has an example.
+       // since the lights are wired clockwise, the bottom row is pretty complicated.
+       // we do assume that our frame is 2 lights wide so the corners are squares of 4
+       // The README at top explains and has an example.
        
-     // light first 4 LEDs to that make the first corner. Also note that this
-     // loop uses < 4 to make the mental model easier even though the others use <=
-     for(i=BOT_LEFT_CORNER; i<BOT_LEFT_CORNER+4; i++) {
-       strip.setPixelColor(i,strip.Color(colorR,colorG,colorB));
-     }
-     // now go get the rest of the bottom row which is at the end of the light strand
-     // because of the wiring order, the numbers here will look really weird. See the
-     // README at the top for clarity
-     for(i=BOT_RIGHT_CORNER-3; i<NUM_LEDS; i++) {
-       strip.setPixelColor(i,strip.Color(colorR,colorG,colorB));
-     }
+       // light first 4 LEDs to that make the first corner. Also note that this
+       // loop uses < 4 to make the mental model easier even though the others use <=
+       for(i=BOT_LEFT_CORNER; i<BOT_LEFT_CORNER+4; i++) {
+         strip.setPixelColor(i,strip.Color(colorR,colorG,colorB));
+       }
+       // now go get the rest of the bottom row which is at the end of the light strand
+       // because of the wiring order, the numbers here will look really weird. See the
+       // README at the top for clarity
+       for(i=BOT_RIGHT_CORNER-3; i<NUM_LEDS; i++) {
+         strip.setPixelColor(i,strip.Color(colorR,colorG,colorB));
+       }
        break;
-     
+	   
+     case WHOLE_FRAME:
+       for(i=BOT_LEFT_CORNER; i<FRAME_END; i++) {
+         strip.setPixelColor(i,strip.Color(colorR,colorG,colorB));
+       }
+       break;
+	 
      default: 
        // if nothing else matches turn off all the lights
-       for(i=BOT_RIGHT_CORNER; i<FRAME_END; i++) {
-       strip.setPixelColor(i,strip.Color(0,0,0));
+       for(i=BOT_LEFT_CORNER; i<FRAME_END; i++) {
+         strip.setPixelColor(i,strip.Color(0,0,0));
      }
        break;
    } // end switch
+
    // turn on the lights
    strip.show();
 } // lightColumn 
