@@ -126,6 +126,8 @@ void setup() {
 
   // registering the intertupt to stop flair mode and go into game mode
   interruptButtonPressed = false;
+  buttonOnePressed = false;
+  buttonTwoPressed = false;
   attachInterrupt(digitalPinToInterrupt(BUTTON_1_PIN), isrButtonOne, FALLING);
   attachInterrupt(digitalPinToInterrupt(BUTTON_2_PIN), isrButtonTwo, FALLING);
   
@@ -186,7 +188,14 @@ void loop() {
 	filled in by green lights which will result in a taller column of green being
 	considered doing the best.
 	
-	Additional ideas on the UI are to fill the remaining area with green on the winning
+   How the code works: We don't get hung on strict time. Instead we make some broad
+    assumptions to life easier. We use interrupts to determine when buttons are
+	pressed. Meanwhile, we loop for a second or 2 waiting 1 ms each iteration
+	checking to see if a button was pressed each time. Each iteration, we add 1 ms
+	to each players reaction time if they haven't pressed the button yet. This 
+	works under the assumption that we keep the code in the loop super small.
+	
+   Additional ideas on the UI are to fill the remaining area with green on the winning
 	side red on the losing side OR to provide a relative weighting where the
 	column is broken up into 3rds where the poorer parts are red, medium are yellow 
 	and better section is green. The idea is that besides beating one another,
@@ -203,60 +212,59 @@ void gameMode(){
    // keep them off for 1 second to make it obvious
    lightsOff(); delay(1000);
    
-   lightFrame(WHOLE_FRAME, 255,0,0); delay(1000);  // Red 
+   // !! READY !!
+   // cycle the whole frame through red, yellow, green
+   lightFrame(WHOLE_FRAME, 255,0,0);   delay(1000);  // Red 
    lightFrame(WHOLE_FRAME, 255,255,0); delay(1000);  // Yellow
-   lightFrame(WHOLE_FRAME, 0,255,0); delay(1000);  // Green 
+   lightFrame(WHOLE_FRAME, 0,255,0);   delay(1000);  // Green 
 
-   lightsOff(); delay(1000);
-   
-   // Red 
-   lightFrame(LEFT_SIDE,  255,0,0); 
-   lightFrame(RIGHT_SIDE, 255,0,0); 
-   delay(1000);   
-   
-   // Yellow
-   lightFrame(LEFT_SIDE,  255,255,0); 
-   lightFrame(RIGHT_SIDE, 255,255,0); 
-   delay(1000);   
+   lightsOff(); delay(500);
 
-   // Green
-   lightFrame(LEFT_SIDE,  0,255,0); 
-   lightFrame(RIGHT_SIDE, 0,255,0); 
-   delay(1000);   
+   // !! STEADY !!
+   // cycle the left and right columns through red, yellow, green  
+   lightFrame(LEFT_SIDE, 255,0,0); lightFrame(RIGHT_SIDE, 255,0,0);     delay(1000); // Red 
+   lightFrame(LEFT_SIDE, 255,255,0); lightFrame(RIGHT_SIDE, 255,255,0); delay(1000); // Yellow 
+   lightFrame(LEFT_SIDE, 0,255,0); lightFrame(RIGHT_SIDE, 0,255,0);     delay(1000); // Green
    
-   // Game starts when the lights go out!
-   lightsOff();
-   
-   // re-enable interrupts because we'll use those to catch the button press
-   interrupts(); 
-   
-   boolean buttonOnePressed = false;
-   boolean buttonTwoPressed = false;
+   // preparing to start the game
    int playerOneTime = 0;
    int playerTwoTime = 0;
-      
-   // loop until 2 seconds or both buttons pressed
    int numMS = 0;
-   while( (numMS < 1000) || ( (playerOneTime > 0) && (playerTwoTime > 0) ) ) {
-     // if a button was pressed for the first time then save the numMS.
-	   if( buttonOnePressed && (playerOneTime > 0) ) {
-	     playerOneTime = numMS;
-       }
-     if( buttonTwoPressed || (playerTwoTime > 0)) {
-	     playerTwoTime = numMS;
-     }
-     // delaying 1 ms is a proxy to count/track time in the loop to see who is fastest
-	   delay(1);   
+
+   // re-enable interrupts because we'll use those to catch the button press
+   interruptButtonPressed = false;
+   buttonOnePressed = false;
+   buttonTwoPressed = false;
+   interrupts(); 
+
+   // !! GO !!
+   // Game starts when the lights go out!
+   lightsOff();   
+   
+   // loop until 2 seconds or both buttons pressed (via interrupt)
+   while( (numMS < 2000) || ( buttonOnePressed && buttonTwoPressed ) {
+      // if button wasn't pressed increment the time
+	  if( !buttonOnePressed ) {
+	     playerOneTime++; 
+      }
+      if( !buttonTwoPressed ) {
+	 	 playerTwoTime++; 
+      }
+      
+      // delaying 1 ms is a proxy to count/track time in the loop to see who is fastest
+	  delay(1);   
+	  numMS++;
    } // end while
 
    // figure out who wins and the show results
    /* TODO */
    
-   // re-enable interrupts and reset flag
-   interrupts();
+   
+   // re-enable interrupts and reset flags
    interruptButtonPressed = false;
    buttonOnePressed = false;
    buttonTwoPressed = false;
+   interrupts();
 } // end gameMode
 
 /*==========================================================================
