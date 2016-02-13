@@ -65,13 +65,15 @@
 // In the example above, this is pixel 27 
 #define FRAME_END 70  
 
-
 // effectively creating an enum for the frame sides
 #define LEFT_SIDE 1
 #define TOP_SIDE 2
 #define RIGHT_SIDE 3
 #define BOTTOM_SIDE 4
 
+// pit game buttons
+#define BUTTON_1_PIN 2
+#define BUTTON_2_PIN 3
 
 
 //==========================================================================
@@ -88,11 +90,34 @@
 Adafruit_NeoPixel strip = Adafruit_NeoPixel(NUM_LEDS, PIXEL_PIN, NEO_RGB + NEO_KHZ800);
 
 //==========================================================================
+// global variables
+
+// Lets us know if flair mode has been interrupted by a button press.
+// has to be volatile because of the way interrupts work.
+volatile boolean interruptButtonPressed;
+
+
+// Interrupt Service Routine (ISR)
+void isr () {
+  interruptButtonPressed = true;
+}  // end of isr
+
+
+//==========================================================================
 void setup() {
   pinMode(13, OUTPUT);  // for the onboard LED, in case we need it for debugging
 
   // pick a pin to ground to start testMode
   pinMode(TEST_MODE_PIN, INPUT_PULLUP);
+
+  // game mode buttons
+  pinMode(BUTTON_1_PIN, INPUT_PULLUP);
+  pinMode(BUTTON_2_PIN, INPUT_PULLUP);
+
+  // registering the intertupt to stop flair mode and go into game mode
+  interruptButtonPressed = false;
+  attachInterrupt(digitalPinToInterrupt(BUTTON_1_PIN), isr, FALLING);
+  attachInterrupt(digitalPinToInterrupt(BUTTON_2_PIN), isr, FALLING);
   
   strip.begin();
   strip.show(); // Initialize all pixels to 'off'
@@ -105,10 +130,10 @@ void loop() {
   // if we grounded the test mode pin, run the test sequence
   if(LOW == digitalRead(TEST_MODE_PIN)) {
      runTestSequence();
-  } 
-  else {
+  } else {
 
   theaterChase(strip.Color(127, 127, 127), 50); // Light White
+  if(interruptButtonPressed) { gameMode(); }
   theaterChase(strip.Color(127, 0, 0), 50);     // Light Red
   theaterChase(strip.Color(0, 0, 127), 50);     // Light Blue
   delay(1000);
@@ -122,7 +147,24 @@ void loop() {
   } // end if / else testMode
 } // end loop
 
-
+/*==========================================================================
+   gameMode: starts a reaction time game 
+   How the game plays: While in flair mode, when 1 button is pressed, the lights
+    will go out and then the game will start. The whole frame will flash red,
+	yellow, green to denote that game mode is starting and hint that the count
+	down will also be red, yellow, geen (like a traffic light). Then the left
+	and right columns will light red, yellow, then green, and then go out. 
+	Think ready, steady, go. After the lights go out, the first person to hit
+	their button wins. If no button is pressed, the game will end after 1 second.
+	The lights in each column will light showing how fast each player was, by
+	the height of the light column from bottom up. 
+   
+   ==========================================================================
+*/
+void gameMode(){
+   noInterrupts();  // once we are in game mode, don't listen to interrupts
+   
+} // end gameMode
 
 /*==========================================================================
    runTestSequence: runs a predefined test pattern to make sure that the
@@ -158,7 +200,6 @@ void runTestSequence(){
   lightFrameSide(BOTTOM_SIDE, 255,255,255); delay(1000);
   
   lightsOff();
-
 
  // Slowly light up the strand, 1 pixel at a time
 //  colorWipe(strip.Color(255, 0, 0), 500); // Red
