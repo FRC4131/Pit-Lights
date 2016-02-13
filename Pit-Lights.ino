@@ -242,7 +242,7 @@ void gameMode(){
    lightsOff();   
    
    // loop until 2 seconds or both buttons pressed (via interrupt)
-   while( (numMS < 2000) || ( buttonOnePressed && buttonTwoPressed ) {
+   while( (numMS < 2000) || ( buttonOnePressed && buttonTwoPressed ) ) {
       // if button wasn't pressed increment the time
 	  if( !buttonOnePressed ) {
 	     playerOneTime++; 
@@ -258,13 +258,34 @@ void gameMode(){
 
    // figure out who wins and the show results
    /* TODO */
-   
+   if(playerOneTime < playerTwoTime) {
+      // player 1 won!
+      // for testing, we'll just flash the winning side and then we'll come back
+	   lightFrame(LEFT_SIDE, 0,255,0); delay(500); lightsOff(); 
+      lightFrame(LEFT_SIDE, 0,255,0); delay(500); lightsOff();
+      lightFrame(LEFT_SIDE, 0,255,0); delay(500); lightsOff();
+      lightFrame(LEFT_SIDE, 0,255,0);
+   } else if (playerOneTime < playerTwoTime) {
+      // player 2 won!
+	   lightFrame(RIGHT_SIDE, 0,255,0); delay(500); lightsOff(); 
+      lightFrame(RIGHT_SIDE, 0,255,0); delay(500); lightsOff();
+      lightFrame(RIGHT_SIDE, 0,255,0); delay(500); lightsOff();
+      lightFrame(RIGHT_SIDE, 0,255,0);
+   } else {
+      // Tie
+	  	lightFrame(LEFT_SIDE, 0,255,0); lightFrame(RIGHT_SIDE, 0,255,0); delay(500); lightsOff(); 
+	  	lightFrame(LEFT_SIDE, 0,255,0); lightFrame(RIGHT_SIDE, 0,255,0); delay(500); lightsOff(); 
+	  	lightFrame(LEFT_SIDE, 0,255,0); lightFrame(RIGHT_SIDE, 0,255,0); delay(500); lightsOff(); 
+	  	lightFrame(LEFT_SIDE, 0,255,0); lightFrame(RIGHT_SIDE, 0,255,0);  
+   } // end if else
    
    // re-enable interrupts and reset flags
    interruptButtonPressed = false;
    buttonOnePressed = false;
    buttonTwoPressed = false;
    interrupts();
+   
+   lightsOff();  // turn off the lights upon exit to go back to regularly scheduled programming
 } // end gameMode
 
 /*==========================================================================
