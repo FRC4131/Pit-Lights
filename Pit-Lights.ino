@@ -7,33 +7,33 @@
    README
    This app has 3 main behaviors: Test Mode (run a test sequence),
      Flair mode (run the flashy show-off sequence),
-	 and Pit Game mode (reaction time game).
-	 
+   and Pit Game mode (reaction time game).
+   
     The lights are housed in to a retangular frame shape and have to be 
-	wired a particular way for this to work. Test mode 	will help validate 
-	that the lights are wired correctly; that we know where the left and right
-	sides are, the corners, and that all code is properly configured for the 
-	number of pixels actually showing in the frame. 
-	
-	The Pit Game needs to know where the uprights are and their orientation
-	so that it can use them as an indicator of game start (eg ready, steady go)
-	as well as a indicator of how fast the player is and who won (player 1 or 2)
+  wired a particular way for this to work. Test mode  will help validate 
+  that the lights are wired correctly; that we know where the left and right
+  sides are, the corners, and that all code is properly configured for the 
+  number of pixels actually showing in the frame. 
+  
+  The Pit Game needs to know where the uprights are and their orientation
+  so that it can use them as an indicator of game start (eg ready, steady go)
+  as well as a indicator of how fast the player is and who won (player 1 or 2)
 
     Pixel wiring: loading the pixels in the frame needs to be done "in order".
-	The fram2 is 2 columns wide on the sides and 2 columns tall on top and bottom.
-	The sequence should follow the wiring pattern below, extended for the number
-	of pixels in the frame.
-	
-	10 11 12 14 16 17  
-	8  9  13 15 18 19  
-	6  7        20 21
-	4  5        22 23
-	2  3  30 28 24 25 
-	0  1  31 29 27 26
+  The fram2 is 2 columns wide on the sides and 2 columns tall on top and bottom.
+  The sequence should follow the wiring pattern below, extended for the number
+  of pixels in the frame.
+  
+  10 11 12 14 16 17  
+  8  9  13 15 18 19  
+  6  7        20 21
+  4  5        22 23
+  2  3  30 28 24 25 
+  0  1  31 29 27 26
 
-	Of note: 27 and 26 in the above example are "reversed" because the length 
-	of the wires between the lights isn't long enough to stretch from the hole
-	at position 26 to the hole at position 28.
+  Of note: 27 and 26 in the above example are "reversed" because the length 
+  of the wires between the lights isn't long enough to stretch from the hole
+  at position 26 to the hole at position 28.
 */
    
 //==========================================================================
@@ -98,13 +98,15 @@ void setup() {
   strip.show(); // Initialize all pixels to 'off'
 }
 
+
 //==========================================================================
 void loop() {
 
   // if we grounded the test mode pin, run the test sequence
   if(LOW == digitalRead(TEST_MODE_PIN)) {
      runTestSequence();
-  } else {
+  } 
+  else {
 
   theaterChase(strip.Color(127, 127, 127), 50); // Light White
   theaterChase(strip.Color(127, 0, 0), 50);     // Light Red
@@ -117,28 +119,17 @@ void loop() {
   delay(1000);
   
     
-  } // end if/else testMode
+  } // end if / else testMode
 } // end loop
 
 
-//==========================================================================
-void blinkLED(int pin, int nTimes) {
-  digitalWrite(pin, LOW);
-  for(int i=0; i<nTimes; i++) {
-    digitalWrite(13, HIGH); 
-    delay(300);
-    digitalWrite(13, LOW);
-    delay(300); 
-  }
-    
-} // end blinkLED
 
-
-//==========================================================================
-// runTestSequence: runs a predefined test pattern to make sure that the
-// pixels are wired properly in the frame and that we know that all the key
-// points and edges are located where we expect them.
-//
+/*==========================================================================
+   runTestSequence: runs a predefined test pattern to make sure that the
+   pixels are wired properly in the frame and that we know that all the key
+   points and edges are located where we expect them.
+  ==========================================================================
+*/
 void runTestSequence(){
   // left column bottom row from left to right
   simpleCyclePixel(BOT_LEFT_CORNER);
@@ -159,11 +150,13 @@ void runTestSequence(){
   lightsOff();
   
   // Light the frame sides: left and right, then top and bottom
-  lightFrameSide(LEFT_SIDE, 255,0,0);  delay(500);
-  lightFrameSide(RIGHT_SIDE, 0,255,0); delay(500);
+  lightFrameSide(LEFT_SIDE, 255,0,0);  delay(1000);
+  lightFrameSide(RIGHT_SIDE, 0,255,0); delay(1000);
   lightsOff();
-  lightFrameSide(TOP_SIDE, 0,0,255);        delay(500);
-  lightFrameSide(BOTTOM_SIDE, 255,255,255); delay(500);
+  
+  lightFrameSide(TOP_SIDE, 0,0,255);        delay(1000);
+  lightFrameSide(BOTTOM_SIDE, 255,255,255); delay(1000);
+  
   lightsOff();
 
 
@@ -184,7 +177,7 @@ void simpleCyclePixel(int pixel) {
   strip.setPixelColor(pixel,strip.Color(0,255,0)); strip.show(); delay(500);
   strip.setPixelColor(pixel,strip.Color(0,0,255)); strip.show(); delay(500);
   strip.setPixelColor(pixel,strip.Color(0,0,0));   strip.show(); delay(500);
-} // end simplecCyclePixel
+} // end simpleCyclePixel
 
 /*==========================================================================
    lightFrameSide: Lights a side of the frame. This function may  not live 
@@ -200,60 +193,62 @@ void lightFrameSide(int side, int colorR, int colorG, int colorB) {
   switch (side) {
      case LEFT_SIDE:
        for(i=BOT_LEFT_CORNER; i<=TOP_LEFT_CORNER; i++) {
-	     strip.setPixelColor(i,strip.Color(colorR,colorG,colorB));
-	   }
+       strip.setPixelColor(i,strip.Color(colorR,colorG,colorB));
+     }
        break;
-	   
+     
      case RIGHT_SIDE:
        for(i=TOP_RIGHT_CORNER; i<=BOT_RIGHT_CORNER; i++) {
-	     strip.setPixelColor(i,strip.Color(colorR,colorG,colorB));
-	   }
+       strip.setPixelColor(i,strip.Color(colorR,colorG,colorB));
+     }
        break;
-	   
+     
      case TOP_SIDE:
-	   // since the top side is really two rows and the DEFINES mark the locations
-	   // on the top row, we need to offset appropriately. The README at top explains.
+     // since the top side is really two rows and the DEFINES mark the locations
+     // on the top row, we need to offset appropriately. The README at top explains.
        for(i=TOP_LEFT_CORNER-2; i<=TOP_RIGHT_CORNER+3; i++) {
-	     strip.setPixelColor(i,strip.Color(colorR,colorG,colorB));
-	   }
-	   break;
-	 
+       strip.setPixelColor(i,strip.Color(colorR,colorG,colorB));
+     }
+     break;
+   
      case BOTTOM_SIDE:
-	   // since the lights are wired clockwise, the bottom row is pretty complicated.
-	   // we do assume that our frame is 2 lights wide so the corners are squares of 4
-	   // The README at top explains and has an example.
+     // since the lights are wired clockwise, the bottom row is pretty complicated.
+     // we do assume that our frame is 2 lights wide so the corners are squares of 4
+     // The README at top explains and has an example.
        
-	   // light first 4 LEDs to that make the first corner. Also note that this
-	   // loop uses < 4 to make the mental model easier even though the others use <=
-	   for(i=BOT_LEFT_CORNER; i<BOT_LEFT_CORNER+4; i++) {
-	     strip.setPixelColor(i,strip.Color(colorR,colorG,colorB));
-	   }
-	   // now go get the rest of the bottom row which is at the end of the light strand
-	   // because of the wiring order, the numbers here will look really weird. See the
-	   // README at the top for clarity
-	   for(i=BOT_RIGHT_CORNER-3; i<NUM_LEDS; i++) {
-	     strip.setPixelColor(i,strip.Color(colorR,colorG,colorB));
-	   }
+     // light first 4 LEDs to that make the first corner. Also note that this
+     // loop uses < 4 to make the mental model easier even though the others use <=
+     for(i=BOT_LEFT_CORNER; i<BOT_LEFT_CORNER+4; i++) {
+       strip.setPixelColor(i,strip.Color(colorR,colorG,colorB));
+     }
+     // now go get the rest of the bottom row which is at the end of the light strand
+     // because of the wiring order, the numbers here will look really weird. See the
+     // README at the top for clarity
+     for(i=BOT_RIGHT_CORNER-3; i<NUM_LEDS; i++) {
+       strip.setPixelColor(i,strip.Color(colorR,colorG,colorB));
+     }
        break;
-	   
+     
      default: 
        // if nothing else matches turn off all the lights
        for(i=BOT_RIGHT_CORNER; i<FRAME_END; i++) {
-	     strip.setPixelColor(i,strip.Color(0,0,0));
-	   }
+       strip.setPixelColor(i,strip.Color(0,0,0));
+     }
        break;
-	 
-	 // turn on the lights
-	 strip.show();
+   } // end switch
+   // turn on the lights
+   strip.show();
 } // lightColumn 
 
-//==========================================================================
-// turn the lights off 
-//==========================================================================
+/*==========================================================================
+   turn all the lights off 
+  ==========================================================================
+*/
 void lightsOff() {
-  for(i=BOT_RIGHT_CORNER; i<FRAME_END; i++) {
-	strip.setPixelColor(i,strip.Color(0,0,0));
+  for(int i=0; i<NUM_LEDS; i++) {
+    strip.setPixelColor(i,strip.Color(0,0,0));
   }
+  strip.show();
 } // end lightsOff;
 
 //==========================================================================
@@ -347,3 +342,19 @@ uint32_t Wheel(byte WheelPos) {
   WheelPos -= 170;
   return strip.Color(WheelPos * 3, 255 - WheelPos * 3, 0);
 } // end Wheel
+
+/*==========================================================================
+    blinkLED: blinks the onboard LED nTimes
+*/
+void blinkLED(int nTimes) {
+  digitalWrite(13, LOW);
+  for(int i=0; i<nTimes; i++) {
+    digitalWrite(13, HIGH); 
+    delay(300);
+    digitalWrite(13, LOW);
+    delay(300); 
+  }
+    
+} // end blinkLED
+
+
