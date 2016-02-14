@@ -20,7 +20,8 @@
   as well as a indicator of how fast the player is and who won (player 1 or 2)
 
     Pixel wiring: loading the pixels in the frame needs to be done "in order".
-  The fram2 is 2 columns wide on the sides and 2 columns tall on top and bottom.
+  This is super important to get right and to validate first (and often).
+  The frame is 2 columns wide on the sides and 2 columns tall on top and bottom.
   The sequence should follow the wiring pattern below, extended for the number
   of pixels in the frame.
   
@@ -29,18 +30,15 @@
   6  7        20 21
   4  5        22 23
   2  3  30 28 24 25 
-  0  1  31 29 27 26
+  0  1  31 29 26 27
 
-  Of note: 27 and 26 in the above example are "reversed" because the length 
-  of the wires between the lights isn't long enough to stretch from the hole
-  at position 26 to the hole at position 28.
 */
    
 //==========================================================================
 // Defines
 
 #define PIXEL_PIN 6          // which data pin drives the pixels
-#define NUM_LEDS 70          // how many lights are in the display
+#define NUM_LEDS 72          // how many lights are in the display
 #define TEST_MODE_PIN 12     // ground this pin to run in test mode
 
 // the first pixel in the sequence at the bottom of the left column. 
@@ -49,21 +47,21 @@
 
 // the last pixel in the sequence at the top of the left column 
 // In the example above, this is pixel 11 
-#define TOP_LEFT_CORNER 34  
+#define TOP_LEFT_CORNER 33
  
 // the first pixel in the sequence at the top of the right column
 // In the example above, this is pixel 16 
-#define TOP_RIGHT_CORNER 37  
+#define TOP_RIGHT_CORNER 36  
 
 // the last pixel in the sequence at the bottom of the right column
-// In the example above, this is pixel 27 
-#define BOT_RIGHT_CORNER 70  
+// In the example above, this is pixel 26 
+#define BOT_RIGHT_CORNER 68
 
 // the last pixel in the sequence that is the outer 2 columns of the frame.
 // this is currently a bit of over-engineering, in case additional pixels at
 // the end of the strand are rolled into some other part of the display
 // In the example above, this is pixel 27 
-#define FRAME_END 70  
+#define FRAME_END 72  
 
 // effectively creating an enum for the frame sides
 #define LEFT_SIDE 1
@@ -107,6 +105,7 @@ void isrButtonOne () {
   interruptButtonPressed = true;
   buttonOnePressed = true;
 }  // end of isr
+
 void isrButtonTwo () {
   interruptButtonPressed = true;
   buttonTwoPressed = true;
@@ -115,30 +114,32 @@ void isrButtonTwo () {
 
 //==========================================================================
 void setup() {
-  pinMode(13, OUTPUT);  // for the onboard LED, in case we need it for debugging
+   pinMode(13, OUTPUT);  // for the onboard LED, in case we need it for debugging
 
-  // pick a pin to ground to start testMode
-  pinMode(TEST_MODE_PIN, INPUT_PULLUP);
+   // pick a pin to ground to start testMode
+   pinMode(TEST_MODE_PIN, INPUT_PULLUP);
 
-  // game mode buttons
-  pinMode(BUTTON_1_PIN, INPUT_PULLUP);
-  pinMode(BUTTON_2_PIN, INPUT_PULLUP);
+   // game mode buttons
+   pinMode(BUTTON_1_PIN, INPUT_PULLUP);
+   pinMode(BUTTON_2_PIN, INPUT_PULLUP);
 
-  // registering the intertupt to stop flair mode and go into game mode
-  interruptButtonPressed = false;
-  buttonOnePressed = false;
-  buttonTwoPressed = false;
-  attachInterrupt(digitalPinToInterrupt(BUTTON_1_PIN), isrButtonOne, FALLING);
-  attachInterrupt(digitalPinToInterrupt(BUTTON_2_PIN), isrButtonTwo, FALLING);
+   // registering the intertupt to stop flair mode and go into game mode
+   interruptButtonPressed = false;
+   buttonOnePressed = false;
+   buttonTwoPressed = false;
+   attachInterrupt(digitalPinToInterrupt(BUTTON_1_PIN), isrButtonOne, FALLING);
+   attachInterrupt(digitalPinToInterrupt(BUTTON_2_PIN), isrButtonTwo, FALLING);
   
-  strip.begin();
-  strip.show(); // Initialize all pixels to 'off'
+   strip.begin();
+   strip.show(); // Initialize all pixels to 'off'
 }
 
 
 //==========================================================================
 void loop() {
 
+  lightsOff(); delay(1000);
+   
   // if we grounded the test mode pin, run the test sequence
   if(LOW == digitalRead(TEST_MODE_PIN)) {
      runTestSequence();
@@ -235,7 +236,7 @@ void gameMode(){
    interruptButtonPressed = false;
    buttonOnePressed = false;
    buttonTwoPressed = false;
-   interrupts(); 
+   //interrupts(); 
 
    // !! GO !!
    // Game starts when the lights go out!
@@ -244,6 +245,15 @@ void gameMode(){
    // loop until 2 seconds or both buttons pressed (via interrupt)
    while( (numMS < 2000) || ( buttonOnePressed && buttonTwoPressed ) ) {
       // if button wasn't pressed increment the time
+      
+      // check the buttons
+      if(LOW == digitalRead(BUTTON_1_PIN)) {
+         buttonOnePressed = true;
+      }
+      if(LOW == digitalRead(BUTTON_2_PIN)) {
+         buttonTwoPressed = true;
+      }
+      
 	  if( !buttonOnePressed ) {
 	     playerOneTime++; 
       }
@@ -261,21 +271,21 @@ void gameMode(){
    if(playerOneTime < playerTwoTime) {
       // player 1 won!
       // for testing, we'll just flash the winning side and then we'll come back
-	   lightFrame(LEFT_SIDE, 0,255,0); delay(500); lightsOff(); 
-      lightFrame(LEFT_SIDE, 0,255,0); delay(500); lightsOff();
-      lightFrame(LEFT_SIDE, 0,255,0); delay(500); lightsOff();
+	   lightFrame(LEFT_SIDE, 0,255,0); delay(500); lightsOff(); delay(500);
+      lightFrame(LEFT_SIDE, 0,255,0); delay(500); lightsOff(); delay(500);
+      lightFrame(LEFT_SIDE, 0,255,0); delay(500); lightsOff(); delay(500);
       lightFrame(LEFT_SIDE, 0,255,0);
-   } else if (playerOneTime < playerTwoTime) {
+   } else if (playerOneTime > playerTwoTime) {
       // player 2 won!
-	   lightFrame(RIGHT_SIDE, 0,255,0); delay(500); lightsOff(); 
-      lightFrame(RIGHT_SIDE, 0,255,0); delay(500); lightsOff();
-      lightFrame(RIGHT_SIDE, 0,255,0); delay(500); lightsOff();
+	   lightFrame(RIGHT_SIDE, 0,255,0); delay(500); lightsOff(); delay(500);
+      lightFrame(RIGHT_SIDE, 0,255,0); delay(500); lightsOff(); delay(500);
+      lightFrame(RIGHT_SIDE, 0,255,0); delay(500); lightsOff(); delay(500);
       lightFrame(RIGHT_SIDE, 0,255,0);
    } else {
       // Tie
-	  	lightFrame(LEFT_SIDE, 0,255,0); lightFrame(RIGHT_SIDE, 0,255,0); delay(500); lightsOff(); 
-	  	lightFrame(LEFT_SIDE, 0,255,0); lightFrame(RIGHT_SIDE, 0,255,0); delay(500); lightsOff(); 
-	  	lightFrame(LEFT_SIDE, 0,255,0); lightFrame(RIGHT_SIDE, 0,255,0); delay(500); lightsOff(); 
+	  	lightFrame(LEFT_SIDE, 0,255,0); lightFrame(RIGHT_SIDE, 0,255,0); delay(500); lightsOff(); delay(500);
+	  	lightFrame(LEFT_SIDE, 0,255,0); lightFrame(RIGHT_SIDE, 0,255,0); delay(500); lightsOff(); delay(500);
+	  	lightFrame(LEFT_SIDE, 0,255,0); lightFrame(RIGHT_SIDE, 0,255,0); delay(500); lightsOff(); delay(500);
 	  	lightFrame(LEFT_SIDE, 0,255,0); lightFrame(RIGHT_SIDE, 0,255,0);  
    } // end if else
    
@@ -301,7 +311,7 @@ void runTestSequence(){
 
   // left column top row from left to right
   simpleCyclePixel(TOP_LEFT_CORNER-1);
-  simpleCyclePixel(BOT_LEFT_CORNER);
+  simpleCyclePixel(TOP_LEFT_CORNER);
 
   // right column top row from left to right
   simpleCyclePixel(TOP_RIGHT_CORNER);
@@ -309,7 +319,7 @@ void runTestSequence(){
  
   // right column bottom row from left to right
   simpleCyclePixel(BOT_RIGHT_CORNER);
-  simpleCyclePixel(BOT_RIGHT_CORNER-1);
+  simpleCyclePixel(BOT_RIGHT_CORNER+1);
 
   lightsOff();
   
@@ -361,7 +371,7 @@ void lightFrame(int side, int colorR, int colorG, int colorB) {
        break;
      
      case RIGHT_SIDE:
-       for(i=TOP_RIGHT_CORNER; i<=BOT_RIGHT_CORNER; i++) {
+       for(i=TOP_RIGHT_CORNER; i<=BOT_RIGHT_CORNER+1; i++) {
        strip.setPixelColor(i,strip.Color(colorR,colorG,colorB));
      }
        break;
@@ -369,7 +379,7 @@ void lightFrame(int side, int colorR, int colorG, int colorB) {
      case TOP_SIDE:
        // since the top side is really two rows and the DEFINES mark the locations
        // on the top row, we need to offset appropriately. The README at top explains.
-       for(i=TOP_LEFT_CORNER-2; i<=TOP_RIGHT_CORNER+3; i++) {
+       for(i=TOP_LEFT_CORNER-3; i<=TOP_RIGHT_CORNER+3; i++) {
        strip.setPixelColor(i,strip.Color(colorR,colorG,colorB));
      }
      break;
@@ -387,7 +397,7 @@ void lightFrame(int side, int colorR, int colorG, int colorB) {
        // now go get the rest of the bottom row which is at the end of the light strand
        // because of the wiring order, the numbers here will look really weird. See the
        // README at the top for clarity
-       for(i=BOT_RIGHT_CORNER-3; i<NUM_LEDS; i++) {
+       for(i=BOT_RIGHT_CORNER-2; i<NUM_LEDS; i++) {
          strip.setPixelColor(i,strip.Color(colorR,colorG,colorB));
        }
        break;
