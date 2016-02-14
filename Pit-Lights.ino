@@ -1,7 +1,9 @@
 #include <Adafruit_NeoPixel.h>
+
 #ifdef __AVR__
   #include <avr/power.h>
 #endif
+
 
 /*==========================================================================
    README
@@ -60,7 +62,7 @@
 // the last pixel in the sequence that is the outer 2 columns of the frame.
 // this is currently a bit of over-engineering, in case additional pixels at
 // the end of the strand are rolled into some other part of the display
-// In the example above, this is pixel 27 
+// In the example above, this is pixel 31 
 #define FRAME_END 72  
 
 // effectively creating an enum for the frame sides
@@ -70,22 +72,22 @@
 #define BOTTOM_SIDE 4
 #define WHOLE_FRAME 5
 
-// pit game buttons
+// pit game button pins
 #define BUTTON_1_PIN 2
 #define BUTTON_2_PIN 3
 
 
-//==========================================================================
-// Initialize the Pixel Library
-//
-// Parameter 1 = number of pixels in strip
-// Parameter 2 = Arduino pin number (most are valid)
-// Parameter 3 = pixel type flags, add together as needed:
-//   NEO_KHZ800  800 KHz bitstream (most NeoPixel products w/WS2812 LEDs)
-//   NEO_KHZ400  400 KHz (classic 'v1' (not v2) FLORA pixels, WS2811 drivers)
-//   NEO_GRB     Pixels are wired for GRB bitstream (most NeoPixel products)
-//   NEO_RGB     Pixels are wired for RGB bitstream (v1 FLORA pixels, not v2)
-
+/*==========================================================================
+   Initialize the Pixel Library (pulled from the Adafruit sample code)
+  
+   Parameter 1 = number of pixels in strip
+   Parameter 2 = Arduino pin number (most are valid)
+   Parameter 3 = pixel type flags, add together as needed:
+     NEO_KHZ800  800 KHz bitstream (most NeoPixel products w/WS2812 LEDs)
+     NEO_KHZ400  400 KHz (classic 'v1' (not v2) FLORA pixels, WS2811 drivers)
+     NEO_GRB     Pixels are wired for GRB bitstream (most NeoPixel products)
+     NEO_RGB     Pixels are wired for RGB bitstream (v1 FLORA pixels, not v2)
+*/
 Adafruit_NeoPixel strip = Adafruit_NeoPixel(NUM_LEDS, PIXEL_PIN, NEO_RGB + NEO_KHZ800);
 
 //==========================================================================
@@ -102,15 +104,17 @@ volatile boolean interruptButtonPressed;
 
 // Interrupt Service Routine (ISR)
 void isrButtonOne () {
-Serial.println("isrButtonOne: Button 1 pressed");
-  interruptButtonPressed = true;
+   noInterrupts(); // disabling interrupts to set shared variable in case another interrupt happens
+   interruptButtonPressed = true;
 //  buttonOnePressed = true;
+   interrupts();
 }  // end of isr
 
 void isrButtonTwo () {
-Serial.println("isrButtonTwo: Button 2 pressed");
+   noInterrupts();
   interruptButtonPressed = true;
 //  buttonTwoPressed = true;
+   interrupts();
 }  // end of isr
 
 
@@ -129,8 +133,8 @@ void setup() {
 
    // registering the intertupt to stop flair mode and go into game mode
    interruptButtonPressed = false;
-   buttonOnePressed = false;
-   buttonTwoPressed = false;
+//   buttonOnePressed = false;
+//   buttonTwoPressed = false;
    attachInterrupt(digitalPinToInterrupt(BUTTON_1_PIN), isrButtonOne, FALLING);
    attachInterrupt(digitalPinToInterrupt(BUTTON_2_PIN), isrButtonTwo, FALLING);
   
@@ -142,7 +146,7 @@ void setup() {
 //==========================================================================
 void loop() {
 
-  lightsOff(); delay(1000);
+  lightsOff(); delay(1000); simpleCyclePixel(TOP_LEFT_CORNER-1); // indicate loop start
    
   // if we grounded the test mode pin, run the test sequence
   if(LOW == digitalRead(TEST_MODE_PIN)) {
@@ -158,20 +162,20 @@ void loop() {
   theaterChase(strip.Color(0, 0, 127), 50);     // Light Blue
   if(interruptButtonPressed) { gameMode(); }
 
-  delay(1000);
+  //delay(1000);
+  //if(interruptButtonPressed) { gameMode(); }
+
+  rainbow(10);
   if(interruptButtonPressed) { gameMode(); }
 
-  rainbow(20);
+  rainbowCycle(10);
   if(interruptButtonPressed) { gameMode(); }
 
-  rainbowCycle(20);
+  theaterChaseRainbow(10); 
   if(interruptButtonPressed) { gameMode(); }
 
-  theaterChaseRainbow(20); 
-  if(interruptButtonPressed) { gameMode(); }
-
-  delay(1000);
-  if(interruptButtonPressed) { gameMode(); }
+  //delay(1000);
+  //if(interruptButtonPressed) { gameMode(); }
   
     
   } // end if / else testMode
@@ -498,11 +502,14 @@ void theaterChase(uint32_t c, uint8_t wait) {
         strip.setPixelColor(i+q, 0);        //turn every third pixel off
       }
     } // end q loop
+    
+    if(interruptButtonPressed) { gameMode(); }
+  
   } // end j loop
 } // end theaterChase
 
 //==========================================================================
-//Theatre-style crawling lights with rainbow effect
+// Theatre-style crawling lights with rainbow effect
 void theaterChaseRainbow(uint8_t wait) {
   for (int j=0; j < 256; j++) {     // cycle all 256 colors in the wheel
     for (int q=0; q < 3; q++) {
@@ -517,6 +524,9 @@ void theaterChaseRainbow(uint8_t wait) {
         strip.setPixelColor(i+q, 0);        //turn every third pixel off
       }
     } // end q loop
+
+    if(interruptButtonPressed) { gameMode(); }
+
   } // end j loop
 } // end theaterChaseRainbow
 
