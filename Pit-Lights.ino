@@ -97,25 +97,29 @@ volatile boolean interruptButtonPressed;
 
 // Lets us know which button was pressed by way of interrupts 
 // (has to be volatile because of the way interrupts work)
-volatile boolean buttonOnePressed;
-volatile boolean buttonTwoPressed;
+//volatile boolean buttonOnePressed;
+//volatile boolean buttonTwoPressed;
 
 // Interrupt Service Routine (ISR)
 void isrButtonOne () {
+Serial.println("isrButtonOne: Button 1 pressed");
   interruptButtonPressed = true;
-  buttonOnePressed = true;
+//  buttonOnePressed = true;
 }  // end of isr
 
 void isrButtonTwo () {
+Serial.println("isrButtonTwo: Button 2 pressed");
   interruptButtonPressed = true;
-  buttonTwoPressed = true;
+//  buttonTwoPressed = true;
 }  // end of isr
 
 
 //==========================================================================
 void setup() {
    pinMode(13, OUTPUT);  // for the onboard LED, in case we need it for debugging
-
+   
+   Serial.begin(9600);   // set up serial port for console logging
+   
    // pick a pin to ground to start testMode
    pinMode(TEST_MODE_PIN, INPUT_PULLUP);
 
@@ -132,7 +136,7 @@ void setup() {
   
    strip.begin();
    strip.show(); // Initialize all pixels to 'off'
-}
+} // end setup
 
 
 //==========================================================================
@@ -163,7 +167,7 @@ void loop() {
   rainbowCycle(20);
   if(interruptButtonPressed) { gameMode(); }
 
-  theaterChaseRainbow(50); 
+  theaterChaseRainbow(20); 
   if(interruptButtonPressed) { gameMode(); }
 
   delay(1000);
@@ -234,27 +238,31 @@ void gameMode(){
 
    // re-enable interrupts because we'll use those to catch the button press
    interruptButtonPressed = false;
-   buttonOnePressed = false;
-   buttonTwoPressed = false;
+   
+   boolean buttonOnePressed = false;
+   boolean buttonTwoPressed = false;
    //interrupts(); 
 
    // !! GO !!
    // Game starts when the lights go out!
    lightsOff();   
    
+   Serial.println("entering wait for button press loop");
    // loop until 2 seconds or both buttons pressed (via interrupt)
    while( (numMS < 2000) || ( buttonOnePressed && buttonTwoPressed ) ) {
-      // if button wasn't pressed increment the time
       
       // check the buttons
       if(LOW == digitalRead(BUTTON_1_PIN)) {
          buttonOnePressed = true;
+         Serial.println("Game: Button 1 pressed");
       }
       if(LOW == digitalRead(BUTTON_2_PIN)) {
          buttonTwoPressed = true;
+         Serial.println("Game: Button 2 pressed");
       }
       
-	  if( !buttonOnePressed ) {
+      // if button wasn't pressed increment the time
+      if( !buttonOnePressed ) {
 	     playerOneTime++; 
       }
       if( !buttonTwoPressed ) {
@@ -266,22 +274,26 @@ void gameMode(){
 	  numMS++;
    } // end while
 
+   Serial.println("Game: Finished loop. determining winner.");
+   
    // figure out who wins and the show results
-   /* TODO */
    if(playerOneTime < playerTwoTime) {
+      Serial.println("Game: Player 1 wins");
       // player 1 won!
       // for testing, we'll just flash the winning side and then we'll come back
 	   lightFrame(LEFT_SIDE, 0,255,0); delay(500); lightsOff(); delay(500);
       lightFrame(LEFT_SIDE, 0,255,0); delay(500); lightsOff(); delay(500);
       lightFrame(LEFT_SIDE, 0,255,0); delay(500); lightsOff(); delay(500);
       lightFrame(LEFT_SIDE, 0,255,0);
-   } else if (playerOneTime > playerTwoTime) {
+   } else if (playerTwoTime < playerOneTime ) {
+      Serial.println("Game: Player 2 wins");
       // player 2 won!
 	   lightFrame(RIGHT_SIDE, 0,255,0); delay(500); lightsOff(); delay(500);
       lightFrame(RIGHT_SIDE, 0,255,0); delay(500); lightsOff(); delay(500);
       lightFrame(RIGHT_SIDE, 0,255,0); delay(500); lightsOff(); delay(500);
       lightFrame(RIGHT_SIDE, 0,255,0);
    } else {
+      Serial.println("Game: TIE");
       // Tie
 	  	lightFrame(LEFT_SIDE, 0,255,0); lightFrame(RIGHT_SIDE, 0,255,0); delay(500); lightsOff(); delay(500);
 	  	lightFrame(LEFT_SIDE, 0,255,0); lightFrame(RIGHT_SIDE, 0,255,0); delay(500); lightsOff(); delay(500);
@@ -289,13 +301,14 @@ void gameMode(){
 	  	lightFrame(LEFT_SIDE, 0,255,0); lightFrame(RIGHT_SIDE, 0,255,0);  
    } // end if else
    
+Serial.println("Game: reenable interrupts etc before exit");
    // re-enable interrupts and reset flags
    interruptButtonPressed = false;
-   buttonOnePressed = false;
-   buttonTwoPressed = false;
+//   buttonOnePressed = false;
+//   buttonTwoPressed = false;
    interrupts();
    
-   lightsOff();  // turn off the lights upon exit to go back to regularly scheduled programming
+   lightsOff();  delay(500); // turn off the lights and go back to regularly scheduled programming
 } // end gameMode
 
 /*==========================================================================
