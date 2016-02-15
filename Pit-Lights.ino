@@ -147,31 +147,39 @@ void setup() {
 void loop() {
 
   lightsOff(); delay(1000); simpleCyclePixel(TOP_LEFT_CORNER-1); // indicate loop start
+Serial.println("starting loop");
    
   // if we grounded the test mode pin, run the test sequence
   if(LOW == digitalRead(TEST_MODE_PIN)) {
+Serial.println("Running test sequence");
      runTestSequence();
   } else {
 
+Serial.println("theaterChase light white");
   theaterChase(strip.Color(127, 127, 127), 50); // Light White
   if(interruptButtonPressed) { gameMode(); }    // we do this often to reduce wait time
 
+Serial.println("rainbow");
+  rainbow(10);
+  if(interruptButtonPressed) { gameMode(); }
+
+Serial.println("theaterChase light red");
   theaterChase(strip.Color(127, 0, 0), 50);     // Light Red
   if(interruptButtonPressed) { gameMode(); }
 
+Serial.println("rainbowCycle");
+  rainbowCycle(10);
+  if(interruptButtonPressed) { gameMode(); }
+
+Serial.println("theaterChase light blue");
   theaterChase(strip.Color(0, 0, 127), 50);     // Light Blue
   if(interruptButtonPressed) { gameMode(); }
 
   //delay(1000);
   //if(interruptButtonPressed) { gameMode(); }
 
-  rainbow(10);
-  if(interruptButtonPressed) { gameMode(); }
-
-  rainbowCycle(10);
-  if(interruptButtonPressed) { gameMode(); }
-
-  theaterChaseRainbow(10); 
+Serial.println("theaterChaseRainbow");
+  theaterChaseRainbow(50); 
   if(interruptButtonPressed) { gameMode(); }
 
   //delay(1000);
@@ -223,6 +231,7 @@ void gameMode(){
    
    // !! READY !!
    // cycle the whole frame through red, yellow, green
+Serial.println("!! READY !!");
    lightFrame(WHOLE_FRAME, 255,0,0);   delay(1000);  // Red 
    lightFrame(WHOLE_FRAME, 255,255,0); delay(1000);  // Yellow
    lightFrame(WHOLE_FRAME, 0,255,0);   delay(1000);  // Green 
@@ -231,6 +240,7 @@ void gameMode(){
 
    // !! STEADY !!
    // cycle the left and right columns through red, yellow, green  
+Serial.println("!! STEADY !!");
    lightFrame(LEFT_SIDE, 255,0,0); lightFrame(RIGHT_SIDE, 255,0,0);     delay(1000); // Red 
    lightFrame(LEFT_SIDE, 255,255,0); lightFrame(RIGHT_SIDE, 255,255,0); delay(1000); // Yellow 
    lightFrame(LEFT_SIDE, 0,255,0); lightFrame(RIGHT_SIDE, 0,255,0);     delay(1000); // Green
@@ -247,24 +257,29 @@ void gameMode(){
    boolean buttonTwoPressed = false;
    //interrupts(); 
 
+Serial.println("!! GO !!");
    // !! GO !!
    // Game starts when the lights go out!
    lightsOff();   
    
-   Serial.println("entering wait for button press loop");
+   Serial.println(".entering wait for button press loop");
    // loop until 2 seconds or both buttons pressed (via interrupt)
-   while( (numMS < 2000) || ( buttonOnePressed && buttonTwoPressed ) ) {
+   while( (numMS < 2000) && (!( buttonOnePressed && buttonTwoPressed ) ) ) {
       
       // check the buttons
       if(LOW == digitalRead(BUTTON_1_PIN)) {
          buttonOnePressed = true;
-         Serial.println("Game: Button 1 pressed");
+//         Serial.println(".Game: Button 1 pressed");
       }
       if(LOW == digitalRead(BUTTON_2_PIN)) {
          buttonTwoPressed = true;
-         Serial.println("Game: Button 2 pressed");
+//         Serial.println(".Game: Button 2 pressed");
       }
       
+//Serial.println("incrementing time of buttons not pressed");
+//if(buttonOnePressed) { Serial.println("Button one pressed TRUE"); }
+//if(buttonTwoPressed) { Serial.println("Button two pressed TRUE"); }
+
       // if button wasn't pressed increment the time
       if( !buttonOnePressed ) {
 	     playerOneTime++; 
