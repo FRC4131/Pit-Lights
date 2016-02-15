@@ -97,23 +97,16 @@ Adafruit_NeoPixel strip = Adafruit_NeoPixel(NUM_LEDS, PIXEL_PIN, NEO_RGB + NEO_K
 // (has to be volatile because of the way interrupts work)
 volatile boolean interruptButtonPressed;
 
-// Lets us know which button was pressed by way of interrupts 
-// (has to be volatile because of the way interrupts work)
-//volatile boolean buttonOnePressed;
-//volatile boolean buttonTwoPressed;
-
 // Interrupt Service Routine (ISR)
 void isrButtonOne () {
-   noInterrupts(); // disabling interrupts to set shared variable in case another interrupt happens
+   noInterrupts(); // disabling interrupts to set shared variable in case the other interrupt happens
    interruptButtonPressed = true;
-//  buttonOnePressed = true;
    interrupts();
 }  // end of isr
 
 void isrButtonTwo () {
    noInterrupts();
-  interruptButtonPressed = true;
-//  buttonTwoPressed = true;
+   interruptButtonPressed = true;
    interrupts();
 }  // end of isr
 
@@ -133,8 +126,6 @@ void setup() {
 
    // registering the intertupt to stop flair mode and go into game mode
    interruptButtonPressed = false;
-//   buttonOnePressed = false;
-//   buttonTwoPressed = false;
    attachInterrupt(digitalPinToInterrupt(BUTTON_1_PIN), isrButtonOne, FALLING);
    attachInterrupt(digitalPinToInterrupt(BUTTON_2_PIN), isrButtonTwo, FALLING);
   
@@ -147,7 +138,6 @@ void setup() {
 void loop() {
 
   lightsOff(); delay(1000); simpleCyclePixel(TOP_LEFT_CORNER-1); // indicate loop start
-Serial.println("starting loop");
    
   // if we grounded the test mode pin, run the test sequence
   if(LOW == digitalRead(TEST_MODE_PIN)) {
@@ -175,17 +165,10 @@ Serial.println("theaterChase light blue");
   theaterChase(strip.Color(0, 0, 127), 50);     // Light Blue
   if(interruptButtonPressed) { gameMode(); }
 
-  //delay(1000);
-  //if(interruptButtonPressed) { gameMode(); }
-
 Serial.println("theaterChaseRainbow");
   theaterChaseRainbow(50); 
   if(interruptButtonPressed) { gameMode(); }
-
-  //delay(1000);
-  //if(interruptButtonPressed) { gameMode(); }
   
-    
   } // end if / else testMode
 } // end loop
 
@@ -236,7 +219,7 @@ Serial.println("!! READY !!");
    lightFrame(WHOLE_FRAME, 255,255,0); delay(1000);  // Yellow
    lightFrame(WHOLE_FRAME, 0,255,0);   delay(1000);  // Green 
 
-   lightsOff(); delay(500);
+   lightsOff();
 
    // !! STEADY !!
    // cycle the left and right columns through red, yellow, green  
@@ -249,13 +232,9 @@ Serial.println("!! STEADY !!");
    int playerOneTime = 0;
    int playerTwoTime = 0;
    int numMS = 0;
-
-   // re-enable interrupts because we'll use those to catch the button press
-   interruptButtonPressed = false;
    
    boolean buttonOnePressed = false;
    boolean buttonTwoPressed = false;
-   //interrupts(); 
 
 Serial.println("!! GO !!");
    // !! GO !!
@@ -269,17 +248,11 @@ Serial.println("!! GO !!");
       // check the buttons
       if(LOW == digitalRead(BUTTON_1_PIN)) {
          buttonOnePressed = true;
-//         Serial.println(".Game: Button 1 pressed");
       }
       if(LOW == digitalRead(BUTTON_2_PIN)) {
          buttonTwoPressed = true;
-//         Serial.println(".Game: Button 2 pressed");
       }
       
-//Serial.println("incrementing time of buttons not pressed");
-//if(buttonOnePressed) { Serial.println("Button one pressed TRUE"); }
-//if(buttonTwoPressed) { Serial.println("Button two pressed TRUE"); }
-
       // if button wasn't pressed increment the time
       if( !buttonOnePressed ) {
 	     playerOneTime++; 
@@ -289,42 +262,50 @@ Serial.println("!! GO !!");
       }
       
       // delaying 1 ms is a proxy to count/track time in the loop to see who is fastest
-	  delay(1);   
-	  numMS++;
+	   delay(1);   
+	   numMS++;
    } // end while
 
-   Serial.println("Game: Finished loop. determining winner.");
+Serial.println("Game: Finished loop. determining winner.");
+   
+   // TODO: really should the numMS for each player in columns where white coming down from the top 
+   //   represents the time and then the solid color up from the bottom shows how high a score was
+   //   earned, where the winning side bottom is green and the losing is red. This will change the
+   //   nature of the if then else below since it will really be about what color to fill in the.
+
    
    // figure out who wins and the show results
    if(playerOneTime < playerTwoTime) {
-      Serial.println("Game: Player 1 wins");
+Serial.println("Game: Player 1 wins");
       // player 1 won!
-      // for testing, we'll just flash the winning side and then we'll come back
+      // TODO: do the better game winning UI
+      // for testing, we'll just flash the winning side 
 	   lightFrame(LEFT_SIDE, 0,255,0); delay(500); lightsOff(); delay(500);
       lightFrame(LEFT_SIDE, 0,255,0); delay(500); lightsOff(); delay(500);
       lightFrame(LEFT_SIDE, 0,255,0); delay(500); lightsOff(); delay(500);
       lightFrame(LEFT_SIDE, 0,255,0);
    } else if (playerTwoTime < playerOneTime ) {
-      Serial.println("Game: Player 2 wins");
+Serial.println("Game: Player 2 wins");
       // player 2 won!
+      // TODO: do the better game winning UI
+      // for testing, we'll just flash the winning side 
 	   lightFrame(RIGHT_SIDE, 0,255,0); delay(500); lightsOff(); delay(500);
       lightFrame(RIGHT_SIDE, 0,255,0); delay(500); lightsOff(); delay(500);
       lightFrame(RIGHT_SIDE, 0,255,0); delay(500); lightsOff(); delay(500);
       lightFrame(RIGHT_SIDE, 0,255,0);
    } else {
-      Serial.println("Game: TIE");
+Serial.println("Game: TIE");
       // Tie
+      // TODO: do the better game winning UI
+      // for testing, we'll just flash the both sides
 	  	lightFrame(LEFT_SIDE, 0,255,0); lightFrame(RIGHT_SIDE, 0,255,0); delay(500); lightsOff(); delay(500);
 	  	lightFrame(LEFT_SIDE, 0,255,0); lightFrame(RIGHT_SIDE, 0,255,0); delay(500); lightsOff(); delay(500);
 	  	lightFrame(LEFT_SIDE, 0,255,0); lightFrame(RIGHT_SIDE, 0,255,0); delay(500); lightsOff(); delay(500);
 	  	lightFrame(LEFT_SIDE, 0,255,0); lightFrame(RIGHT_SIDE, 0,255,0);  
    } // end if else
    
-Serial.println("Game: reenable interrupts etc before exit");
    // re-enable interrupts and reset flags
    interruptButtonPressed = false;
-//   buttonOnePressed = false;
-//   buttonTwoPressed = false;
    interrupts();
    
    lightsOff();  delay(500); // turn off the lights and go back to regularly scheduled programming
@@ -366,9 +347,7 @@ void runTestSequence(){
   lightsOff();
 
  // Slowly light up the strand, 1 pixel at a time
-//  colorWipe(strip.Color(255, 0, 0), 500); // Red
-//  colorWipe(strip.Color(0, 255, 0), 500); // Green
-//  colorWipe(strip.Color(0, 0, 255), 500); // Blue
+  colorWipe(strip.Color(0, 0, 255), 250); // Blue
 
 } // end testSequence
 
