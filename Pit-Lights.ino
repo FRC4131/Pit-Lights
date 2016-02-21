@@ -40,30 +40,30 @@
 // Defines
 
 #define PIXEL_PIN 6          // which data pin drives the pixels
-#define NUM_LEDS 72          // how many lights are in the display
+#define NUM_LEDS 180         // how many lights are in the display
 #define TEST_MODE_PIN 12     // ground this pin to run in test mode
 
 // the first pixel in the sequence at the bottom of the left column. 
 // In the example above, this is pixel 0
 #define BOT_LEFT_CORNER 0   
 
-// the last pixel in the sequence at the top of the left column 
-// In the example above, this is pixel 11 
-#define TOP_LEFT_CORNER 33
+// the pixel in the top of the left corner. 
+// In the example above, this is pixel 10
+#define TOP_LEFT_CORNER 60
  
-// the first pixel in the sequence at the top of the right column
-// In the example above, this is pixel 16 
-#define TOP_RIGHT_CORNER 36  
+// the first pixel in the top right corner
+// In the example above, this is pixel 17
+#define TOP_RIGHT_CORNER 91  
 
-// the last pixel in the sequence at the bottom of the right column
-// In the example above, this is pixel 26 
-#define BOT_RIGHT_CORNER 68
+// the pixel in the bottom right column
+// In the example above, this is pixel 27 
+#define BOT_RIGHT_CORNER 151
 
 // the last pixel in the sequence that is the outer 2 columns of the frame.
 // this is currently a bit of over-engineering, in case additional pixels at
 // the end of the strand are rolled into some other part of the display
 // In the example above, this is pixel 31 
-#define FRAME_END 72  
+#define FRAME_END 180
 
 // effectively creating an enum for the frame sides
 #define LEFT_SIDE 1
@@ -71,11 +71,13 @@
 #define RIGHT_SIDE 3
 #define BOTTOM_SIDE 4
 #define WHOLE_FRAME 5
+#define LEFT_AND_RIGHT_SIDE 6 
 
 // pit game button pins
 #define BUTTON_1_PIN 2
 #define BUTTON_2_PIN 3
 
+#define GAME_TIMEOUT 2000
 
 /*==========================================================================
    Initialize the Pixel Library (pulled from the Adafruit sample code)
@@ -137,7 +139,7 @@ void setup() {
 //==========================================================================
 void loop() {
 
-  lightsOff(); delay(1000); simpleCyclePixel(TOP_LEFT_CORNER-1); // indicate loop start
+  lightsOff(); delay(100); simpleCyclePixel(TOP_LEFT_CORNER); // indicate loop start
    
   // if we grounded the test mode pin, run the test sequence
   if(LOW == digitalRead(TEST_MODE_PIN)) {
@@ -146,24 +148,31 @@ Serial.println("Running test sequence");
   } else {
 
 Serial.println("theaterChase light white");
-  theaterChase(strip.Color(127, 127, 127), 50); // Light White
-  if(interruptButtonPressed) { gameMode(); }    // we do this often to reduce wait time
+  int i;
+  for(i=0; i<10; i++) {
+    theaterChase(strip.Color(127, 127, 127), 60); // Light White
+    if(interruptButtonPressed) { gameMode(); }    // we do this often to reduce wait time
+  }
 
-Serial.println("rainbow");
-  rainbow(10);
+Serial.println("rainbowCycle 1");
+  rainbowCycle(10);
   if(interruptButtonPressed) { gameMode(); }
 
 Serial.println("theaterChase light red");
-  theaterChase(strip.Color(127, 0, 0), 50);     // Light Red
-  if(interruptButtonPressed) { gameMode(); }
+  for(i=0; i<10; i++){
+    theaterChase(strip.Color(127, 0, 0), 60);     // Light Red
+    if(interruptButtonPressed) { gameMode(); }
+  }
 
-Serial.println("rainbowCycle");
+Serial.println("rainbowCycle 2");
   rainbowCycle(10);
   if(interruptButtonPressed) { gameMode(); }
 
 Serial.println("theaterChase light blue");
-  theaterChase(strip.Color(0, 0, 127), 50);     // Light Blue
-  if(interruptButtonPressed) { gameMode(); }
+  for(i=0; i<10; i++) {
+    theaterChase(strip.Color(0, 0, 127), 60);     // Light Blue
+    if(interruptButtonPressed) { gameMode(); }
+  }
 
 Serial.println("theaterChaseRainbow");
   theaterChaseRainbow(50); 
@@ -214,9 +223,10 @@ void gameMode(){
    
    // !! READY !!
    // cycle the whole frame through red, yellow, green
+   // note: these lights don't show pure yellow very well so we've tweaked the RGB values
 Serial.println("!! READY !!");
    lightFrame(WHOLE_FRAME, 255,0,0);   delay(1000);  // Red 
-   lightFrame(WHOLE_FRAME, 255,255,0); delay(1000);  // Yellow
+   lightFrame(WHOLE_FRAME, 200,127,0); delay(1000);  // Yellow'ish
    lightFrame(WHOLE_FRAME, 0,255,0);   delay(1000);  // Green 
 
    lightsOff();
@@ -225,7 +235,7 @@ Serial.println("!! READY !!");
    // cycle the left and right columns through red, yellow, green  
 Serial.println("!! STEADY !!");
    lightFrame(LEFT_SIDE, 255,0,0); lightFrame(RIGHT_SIDE, 255,0,0);     delay(1000); // Red 
-   lightFrame(LEFT_SIDE, 255,255,0); lightFrame(RIGHT_SIDE, 255,255,0); delay(1000); // Yellow 
+   lightFrame(LEFT_SIDE, 200,127,0); lightFrame(RIGHT_SIDE, 200,127,0); delay(1000); // Yellow'ish 
    lightFrame(LEFT_SIDE, 0,255,0); lightFrame(RIGHT_SIDE, 0,255,0);     delay(1000); // Green
    
    // preparing to start the game
@@ -242,8 +252,8 @@ Serial.println("!! GO !!");
    lightsOff();   
    
    Serial.println(".entering wait for button press loop");
-   // loop until 2 seconds or both buttons pressed (via interrupt)
-   while( (numMS < 2000) && (!( buttonOnePressed && buttonTwoPressed ) ) ) {
+   // loop until 2 seconds or so or both buttons pressed (via interrupt)
+   while( (numMS < GAME_TIMEOUT) && (!( buttonOnePressed && buttonTwoPressed ) ) ) {
       
       // check the buttons
       if(LOW == digitalRead(BUTTON_1_PIN)) {
@@ -273,6 +283,8 @@ Serial.println("Game: Finished loop. determining winner.");
    //   earned, where the winning side bottom is green and the losing is red. This will change the
    //   nature of the if then else below since it will really be about what color to fill in the.
 
+Serial.print("Time: P1:");Serial.print(playerOneTime);Serial.print(" P2:"); Serial.println(playerTwoTime);
+
    
    // figure out who wins and the show results
    if(playerOneTime < playerTwoTime) {
@@ -280,28 +292,20 @@ Serial.println("Game: Player 1 wins");
       // player 1 won!
       // TODO: do the better game winning UI
       // for testing, we'll just flash the winning side 
-	   lightFrame(LEFT_SIDE, 0,255,0); delay(500); lightsOff(); delay(500);
-      lightFrame(LEFT_SIDE, 0,255,0); delay(500); lightsOff(); delay(500);
-      lightFrame(LEFT_SIDE, 0,255,0); delay(500); lightsOff(); delay(500);
-      lightFrame(LEFT_SIDE, 0,255,0);
+	   flashFrame(LEFT_SIDE, 0,255,0);
+      //renderTime(playerOneTime, true, GAME_TIMEOUT);
    } else if (playerTwoTime < playerOneTime ) {
 Serial.println("Game: Player 2 wins");
       // player 2 won!
       // TODO: do the better game winning UI
       // for testing, we'll just flash the winning side 
-	   lightFrame(RIGHT_SIDE, 0,255,0); delay(500); lightsOff(); delay(500);
-      lightFrame(RIGHT_SIDE, 0,255,0); delay(500); lightsOff(); delay(500);
-      lightFrame(RIGHT_SIDE, 0,255,0); delay(500); lightsOff(); delay(500);
-      lightFrame(RIGHT_SIDE, 0,255,0);
+	   flashFrame(RIGHT_SIDE, 0,255,0);
    } else {
 Serial.println("Game: TIE");
       // Tie
       // TODO: do the better game winning UI
       // for testing, we'll just flash the both sides
-	  	lightFrame(LEFT_SIDE, 0,255,0); lightFrame(RIGHT_SIDE, 0,255,0); delay(500); lightsOff(); delay(500);
-	  	lightFrame(LEFT_SIDE, 0,255,0); lightFrame(RIGHT_SIDE, 0,255,0); delay(500); lightsOff(); delay(500);
-	  	lightFrame(LEFT_SIDE, 0,255,0); lightFrame(RIGHT_SIDE, 0,255,0); delay(500); lightsOff(); delay(500);
-	  	lightFrame(LEFT_SIDE, 0,255,0); lightFrame(RIGHT_SIDE, 0,255,0);  
+      flashFrame(LEFT_AND_RIGHT_SIDE, 0,255,0);
    } // end if else
    
    // re-enable interrupts and reset flags
@@ -310,6 +314,75 @@ Serial.println("Game: TIE");
    
    lightsOff();  delay(500); // turn off the lights and go back to regularly scheduled programming
 } // end gameMode
+
+/*==========================================================================
+   renderTime: This will use the time it took a player to press the button
+     and calc a % of the total time. The smaller number the number the better
+     since that means the player is super fast. We will render from the top
+     down in white to show how fast. The goals is to get the bar as short as
+     possible. We will then render the remainder, bottom upwards in green if 
+     they won or in red if they lost. This will be more easy to understand 
+     indication of won or lost. Taller on this scale is better.
+
+     To make this easier, we will call this function twice, once for player
+     1 and once for player 2. We'll render each one as it happens so player
+     1 will flash up slightly first.
+
+     If the player time == the max time we have a special case and we will
+     consider that lame and light up the whole bar as red.
+
+     When we multiply the % by the num rows, we also round up to the next row,
+     no matter how low the decimal. So 27.203 will round up to 28.
+
+     To ensure that we always have room at the bottom to show red or green,
+     we'll cap the total number of rows (top to bottom) that can be used to 
+     show time (in white) by always keeping the bottom two rows available to
+     show win/loss (Red/Green).
+
+     example 1: time is 295. 
+       295/2000 = 0.1475 (or 14.75%) 
+       0.1475 * 31 rows in the up/down column = 4.5725 so light up 5 rows
+     example 2: time is 23. 
+       23/2000 = 0.0115 (or 1.15%) 
+       0.0115 * 31 rows = 0.35, rounded up becomes 1 row.  
+     example 3: time is 1768. 
+       1768/2000 = 0.884 (or 88.4%) 
+       0.0115 * 31 rows = 27.404, rounded up becomes 28 rows.  
+
+     playerTime: this is time in 1 msec increments, given the way the loop
+       time counting loop is written
+     playerWon: did this player win
+     totalTime: how much time is available before it times out. This is how
+       we'll base the %
+  ==========================================================================
+*/
+void renderTime(int playerTime, boolean playerWon, int totalTime){
+   
+
+// TOP_LEFT_CORNER
+
+} // end renderTime
+
+/*==========================================================================
+   flashFrame: will flash parts of the the frame, typically used for showing
+     the winner but could be used for other things. This is basically a 
+     helper function ontop of lightFrame and takes the same inputs
+  ==========================================================================
+*/
+void flashFrame(int side, int colorR, int colorG, int colorB){
+   if(LEFT_AND_RIGHT_SIDE == side) {
+      // this is a special case where we flash both sides if there is a tie
+	  	lightFrame(LEFT_SIDE, 0,255,0); lightFrame(RIGHT_SIDE, 0,255,0); delay(500); lightsOff(); delay(500);
+	  	lightFrame(LEFT_SIDE, 0,255,0); lightFrame(RIGHT_SIDE, 0,255,0); delay(500); lightsOff(); delay(500);
+	  	lightFrame(LEFT_SIDE, 0,255,0); lightFrame(RIGHT_SIDE, 0,255,0); delay(500); lightsOff(); delay(500);
+	  	lightFrame(LEFT_SIDE, 0,255,0); lightFrame(RIGHT_SIDE, 0,255,0);  
+   } else {
+	   lightFrame(side, colorR,colorG,colorB); delay(500); lightsOff(); delay(500);
+	   lightFrame(side, colorR,colorG,colorB); delay(500); lightsOff(); delay(500);
+	   lightFrame(side, colorR,colorG,colorB); delay(500); lightsOff(); delay(500);
+      lightFrame(side, 0,255,0);
+   }
+} // end flashFrame
 
 /*==========================================================================
    runTestSequence: runs a predefined test pattern to make sure that the
@@ -323,16 +396,16 @@ void runTestSequence(){
   simpleCyclePixel(BOT_LEFT_CORNER+1);
 
   // left column top row from left to right
-  simpleCyclePixel(TOP_LEFT_CORNER-1);
   simpleCyclePixel(TOP_LEFT_CORNER);
+  simpleCyclePixel(TOP_LEFT_CORNER+1);
 
   // right column top row from left to right
+  simpleCyclePixel(TOP_RIGHT_CORNER-1);
   simpleCyclePixel(TOP_RIGHT_CORNER);
-  simpleCyclePixel(TOP_RIGHT_CORNER+1);
  
   // right column bottom row from left to right
+  simpleCyclePixel(BOT_RIGHT_CORNER-1);
   simpleCyclePixel(BOT_RIGHT_CORNER);
-  simpleCyclePixel(BOT_RIGHT_CORNER+1);
 
   lightsOff();
   
@@ -376,13 +449,13 @@ void lightFrame(int side, int colorR, int colorG, int colorB) {
   int i;
   switch (side) {
      case LEFT_SIDE:
-       for(i=BOT_LEFT_CORNER; i<=TOP_LEFT_CORNER; i++) {
+       for(i=BOT_LEFT_CORNER; i<=TOP_LEFT_CORNER+1; i++) {
        strip.setPixelColor(i,strip.Color(colorR,colorG,colorB));
      }
        break;
      
      case RIGHT_SIDE:
-       for(i=TOP_RIGHT_CORNER; i<=BOT_RIGHT_CORNER+1; i++) {
+       for(i=TOP_RIGHT_CORNER-1; i<=BOT_RIGHT_CORNER; i++) {
        strip.setPixelColor(i,strip.Color(colorR,colorG,colorB));
      }
        break;
@@ -390,7 +463,7 @@ void lightFrame(int side, int colorR, int colorG, int colorB) {
      case TOP_SIDE:
        // since the top side is really two rows and the DEFINES mark the locations
        // on the top row, we need to offset appropriately. The README at top explains.
-       for(i=TOP_LEFT_CORNER-3; i<=TOP_RIGHT_CORNER+3; i++) {
+       for(i=TOP_LEFT_CORNER-2; i<=TOP_RIGHT_CORNER+2; i++) {
        strip.setPixelColor(i,strip.Color(colorR,colorG,colorB));
      }
      break;
@@ -408,7 +481,7 @@ void lightFrame(int side, int colorR, int colorG, int colorB) {
        // now go get the rest of the bottom row which is at the end of the light strand
        // because of the wiring order, the numbers here will look really weird. See the
        // README at the top for clarity
-       for(i=BOT_RIGHT_CORNER-2; i<NUM_LEDS; i++) {
+       for(i=BOT_RIGHT_CORNER-3; i<NUM_LEDS; i++) {
          strip.setPixelColor(i,strip.Color(colorR,colorG,colorB));
        }
        break;
@@ -454,6 +527,8 @@ void colorWipe(uint32_t c, uint8_t wait) {
 } // end colorWipe
 
 //==========================================================================
+// TODO: fix this so that the color blends between start and end
+
 void rainbow(uint8_t wait) {
   uint16_t i, j;
 
@@ -503,6 +578,8 @@ void theaterChase(uint32_t c, uint8_t wait) {
 } // end theaterChase
 
 //==========================================================================
+// TODO: Fix so that the end pixels blend with the start pixels
+
 // Theatre-style crawling lights with rainbow effect
 void theaterChaseRainbow(uint8_t wait) {
   for (int j=0; j < 256; j++) {     // cycle all 256 colors in the wheel
@@ -525,7 +602,7 @@ void theaterChaseRainbow(uint8_t wait) {
 } // end theaterChaseRainbow
 
 //==========================================================================
-// Input a value 0 to 255 to get a color value.
+// Wheel: Input a value 0 to 255 to get a color value.
 // The colours are a transition r - g - b - back to r.
 uint32_t Wheel(byte WheelPos) {
   WheelPos = 255 - WheelPos;
@@ -539,6 +616,7 @@ uint32_t Wheel(byte WheelPos) {
   WheelPos -= 170;
   return strip.Color(WheelPos * 3, 255 - WheelPos * 3, 0);
 } // end Wheel
+
 
 /*==========================================================================
     blinkLED: blinks the onboard LED nTimes
